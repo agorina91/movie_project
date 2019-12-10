@@ -1,0 +1,49 @@
+OUTLINE AND QUESTIONS
+
+We are investigating the correlation between MPAA rating
+and the reviews from both users and critics using IMDB and Metacritic.
+We want to figure out whether the movies with strong language, frightening scenes,
+scenes with characters smoking, drinking, using drugs, etc. get better reviews from critics
+and users, and if there is any correlation at all. Additionally, we assume that there exists
+a phenomenon of biased reviews: if your friends liked the movie, then you are more likely to write
+a positive review as well. We are looking at a subset of American movies released in the two years.
+
+
+What are the movies marked as 'severe' in Frightening & Intense Scenes/Alcohol, Drugs & Smoking/
+Profanity/Violence & Gore/Sex & Nudity?
+What's the average user rating and critics rating?
+
+What are the movies marked 'mild' Frightening & Intense Scenes/Alcohol, Drugs & Smoking/
+Profanity/Violence & Gore/Sex & Nudity?
+What's the average user rating and critics rating?
+
+What is the distribution of the critic ratings per movie?
+
+What is the distribution of the user ratings per movie?
+
+How does the timeline look like?
+
+DATA NEEDED:
+
+FROM IMDB:
+movie name,
+movie id,
+parent guide,
+user ratings,
+metascore,
+release info (date, country)
+
+FROM Metacritic:
+movie name,
+movie ID,
+date of review,
+critic rating
+
+TABLES:
+
+1. rows: movies ID, columns: Frightening & Intense Scenes/Alcohol, Drugs & Smoking/
+Profanity/Violence & Gore/Sex & Nudity, MPAA, Critics rating, User ratings
+
+2. rows: movies ID, columns: user ratings (1-10), mean, median
+
+3. rows: movies ID, columns: score, date of release
