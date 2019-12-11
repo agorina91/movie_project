@@ -1,6 +1,8 @@
 import requests
 import time
 from bs4 import BeautifulSoup as BS
+import urllib
+from urllib.parse import quote
 
 import config
 
@@ -182,6 +184,9 @@ def parse_user_ratings(movie_id):
 
     table = soup.find('table')
 
+    if not table:
+        return [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+
     rows = table.find_all('tr')
 
     vote_array = []
@@ -192,7 +197,6 @@ def parse_user_ratings(movie_id):
 
     reverse_votes = vote_array[::-1]
     return reverse_votes
-
 
 def parse_all_uratings(movie_dict):
     counter = 0
@@ -232,7 +236,6 @@ def parse_all_uratings(movie_dict):
             time.sleep(1)
         counter += 1
 
-        break
 
 
 def main():
@@ -244,4 +247,43 @@ def main():
     # parse_all_categories(new_dict_2)
 
 
-parse_all_uratings({"tt1825683": True})
+def parse_metacritic(movie_name):
+    categories = {}
+    # https://www.metacritic.com/movie/bombshell/critic-reviews
+
+    f = {'movie_name': movie_name}
+    # encode_movie_name = urllib.parse.urlencode(f)
+    # encode_movie_name = urllib.parse.quote(movie_name)
+    encode_movie_name = movie_name.lower()
+    encode_movie_name = encode_movie_name.replace(' ', '-')
+
+    url = "https://www.metacritic.com/movie/" + encode_movie_name + "/critic-reviews"
+    print(f"Url encoded: {url}")
+
+    soup = prettify_page(url)
+
+    review_dates = soup.find('div', id="main_content")
+    # review_dates = soup.find('div',  class_= "pmxa_yqj4")
+    # review_dates = soup.find('div', class_="pad_btm1")
+
+    #if review_dates:
+        # review_dates = mpaa_rating.find_all("td")[1].string
+    #    pass
+    #else:
+    #    review_dates = "None"
+
+    print(review_dates)
+    return
+
+    categories[movie_id] = (mpaa_rating, nudity, violence, profanity, alcohol, frightening)
+
+    return categories
+
+    # print(f"nudity: {nudity}, violence: {violence}, profanity: {profanity}, alcohol: {alcohol}, frightening: {frightening}")
+
+
+
+# p = parse_user_ratings("tt1825683")
+# print(p)
+
+parse_metacritic("Black Panther")
