@@ -3,6 +3,7 @@ import time
 from bs4 import BeautifulSoup as BS
 import pandas as pd
 from tabulate import tabulate
+from statistics import median_grouped
 # import urllib
 # from urllib.parse import quote
 
@@ -28,6 +29,8 @@ else:
     )
 
 cursor = cnx.cursor()
+
+
 
 
 def prettify_page(url):
@@ -291,7 +294,16 @@ def parse_metacritic(movie_name):
 
 # parse_metacritic("Black Panther")
 
-def find_x_percent_index(percentile: int, l: list):
+
+def find_median_fraction(found_group_offset, total, target_votes, cum_freq_prior, l : list, group_midpoints : list):
+
+    lower_class_boundary = group_midpoints[found_group_offset] - 0.5
+    freq_of_median_group = l[found_group_offset]
+    median_frac = lower_class_boundary + ((target_votes - cum_freq_prior) / l[found_group_offset])
+    return median_frac
+
+
+def find_x_percent_index(percentile: int, l: list, group_midpoints : list):
     """
     Finds the index in the list account for percentile percentage of the data
     chose the index nearest the percentile percentage not necessarily the one greater than it
@@ -299,6 +311,7 @@ def find_x_percent_index(percentile: int, l: list):
     :param l:
     :return:
     """
+
     total = sum(l)
     stop_point = (percentile / 100) * total
 
@@ -309,41 +322,40 @@ def find_x_percent_index(percentile: int, l: list):
         prev_total = curr_total
         curr_total += l[i]
         if curr_total >= stop_point:
-            current_idx_nearest = (curr_total - stop_point) < (stop_point - prev_total)
-            if i == 0:
-                return i
-            if current_idx_nearest:
-                return i
-            else:
-                return i - 1
+            median = find_median_fraction(i, total, stop_point, prev_total, l, group_midpoints)
+            return median
+            # group_midpoints[i]
 
         i += 1
-    return len(l) - 1
+    # This should never happen, but if it does return the last group
+    return group_midpoints(len(l) - 1)
+
 
 
 def skewness_calc(x):
     votes = x[1:11]
 
-    median_index = find_x_percent_index(50, votes)
-    median = votes[median_index]
-    lower_index = find_x_percent_index(25, votes)
-    lower = votes[lower_index]
-    upper_index = find_x_percent_index(75, votes)
-    upper = votes[upper_index]
+    median = find_x_percent_index(50, votes, range(1, 11))
+    lower = find_x_percent_index(25, votes, range(1, 11))
+    upper = find_x_percent_index(75, votes, range(1, 11))
 
-    print(f"lower: {lower} median: {median} upper: {upper}")
+    # print(f"lower: {lower} median: {median} upper: {upper}")
 
     if (upper - lower) == 0:
         return 0
     else:
         skewness = ((median - lower) - (upper - median)) / (upper - lower)
-    return skewness
+
+    return pd.Series([lower, median, upper, skewness])
+
+    # return skewness
 
 
 def add_skewness(user_df):
     user_df = udf.drop(['mean', 'median'], axis=1)
 
-    user_df['skewness'] = user_df.apply(skewness_calc, axis=1)
+    # user_df['skewness'] = user_df.apply(skewness_calc, axis=1)
+    user_df[['lower', 'median', 'upper', 'skewness']] = user_df.apply(skewness_calc, axis=1)
     return user_df
 
 
@@ -355,3 +367,6 @@ skewed = add_skewness(udf)
 
 # print(tabulate(skewed, headers='keys', tablefmt='psql'))
 print(tabulate(skewed, headers='keys', tablefmt='psql'))
+
+dir_path = "/Users/rebjl/PycharmProjects/movie_project/"
+skewed.to_csv(dir_path + "skewed.csv", sep="\t")
