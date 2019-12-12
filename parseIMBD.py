@@ -1,13 +1,16 @@
 import requests
 import time
 from bs4 import BeautifulSoup as BS
-import urllib
-from urllib.parse import quote
+import pandas as pd
+from tabulate import tabulate
+# import urllib
+# from urllib.parse import quote
 
 import config
 
 if config.pycharm:
     import pymysql
+
     cnx = pymysql.connect(
         host=config.host,
         user=config.user,
@@ -16,6 +19,7 @@ if config.pycharm:
     )
 else:
     import mysql.connector
+
     cnx = mysql.connector.connect(
         host=config.host,
         user=config.user,
@@ -198,6 +202,7 @@ def parse_user_ratings(movie_id):
     reverse_votes = vote_array[::-1]
     return reverse_votes
 
+
 def parse_all_uratings(movie_dict):
     counter = 0
 
@@ -237,7 +242,6 @@ def parse_all_uratings(movie_dict):
         counter += 1
 
 
-
 def main():
     new_dict_1 = parse_movies(page_1)
     new_dict_2 = parse_movies(page_2)
@@ -266,10 +270,10 @@ def parse_metacritic(movie_name):
     # review_dates = soup.find('div',  class_= "pmxa_yqj4")
     # review_dates = soup.find('div', class_="pad_btm1")
 
-    #if review_dates:
-        # review_dates = mpaa_rating.find_all("td")[1].string
+    # if review_dates:
+    # review_dates = mpaa_rating.find_all("td")[1].string
     #    pass
-    #else:
+    # else:
     #    review_dates = "None"
 
     print(review_dates)
@@ -282,8 +286,72 @@ def parse_metacritic(movie_name):
     # print(f"nudity: {nudity}, violence: {violence}, profanity: {profanity}, alcohol: {alcohol}, frightening: {frightening}")
 
 
-
 # p = parse_user_ratings("tt1825683")
 # print(p)
 
-parse_metacritic("Black Panther")
+# parse_metacritic("Black Panther")
+
+def find_x_percent_index(percentile: int, l: list):
+    """
+    Finds the index in the list account for percentile percentage of the data
+    chose the index nearest the percentile percentage not necessarily the one greater than it
+    :param percentile:
+    :param l:
+    :return:
+    """
+    total = sum(l)
+    stop_point = (percentile / 100) * total
+
+    curr_total = 0
+    prev_total = 0
+    i = 0
+    for v in l:
+        prev_total = curr_total
+        curr_total += l[i]
+        if curr_total >= stop_point:
+            current_idx_nearest = (curr_total - stop_point) < (stop_point - prev_total)
+            if i == 0:
+                return i
+            if current_idx_nearest:
+                return i
+            else:
+                return i - 1
+
+        i += 1
+    return len(l) - 1
+
+
+def skewness_calc(x):
+    votes = x[1:11]
+
+    median_index = find_x_percent_index(50, votes)
+    median = votes[median_index]
+    lower_index = find_x_percent_index(25, votes)
+    lower = votes[lower_index]
+    upper_index = find_x_percent_index(75, votes)
+    upper = votes[upper_index]
+
+    print(f"lower: {lower} median: {median} upper: {upper}")
+
+    if (upper - lower) == 0:
+        return 0
+    else:
+        skewness = ((median - lower) - (upper - median)) / (upper - lower)
+    return skewness
+
+
+def add_skewness(user_df):
+    user_df = udf.drop(['mean', 'median'], axis=1)
+
+    user_df['skewness'] = user_df.apply(skewness_calc, axis=1)
+    return user_df
+
+
+pd.set_option('display.max_columns', 100)
+pd.set_option('display.max_rows', 100)
+udf = pd.read_csv('user_movie_table.csv', sep='\t')
+# print(udf)
+skewed = add_skewness(udf)
+
+# print(tabulate(skewed, headers='keys', tablefmt='psql'))
+print(tabulate(skewed, headers='keys', tablefmt='psql'))
