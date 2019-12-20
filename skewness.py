@@ -1,26 +1,30 @@
+import pytest
 import requests
 import time
 from bs4 import BeautifulSoup as BS
 import pandas as pd
 import numpy as np
 from tabulate import tabulate
+
 import plotly.express as px
 
 
-def find_median_fraction(found_group_offset, total, target_votes, cum_freq_prior, l: list, group_midpoints: list):
+def find_quantile_fraction(found_group_offset, total, target_votes, cum_freq_prior, l: list, group_midpoints: list,
+                           class_length):
     """
     Given a group_offset containing the percentile, do a straight-line interpolation to get
-    the fractional media point.
+    the fractional quantile point.
     :param found_group_offset:
     :param total:
     :param target_votes:
     :param cum_freq_prior:
     :param l:
     :param group_midpoints:
+    :param class_length
     :return:
     """
     lower_class_boundary = group_midpoints[found_group_offset] - 0.5
-    median_frac = lower_class_boundary + ((target_votes - cum_freq_prior) / l[found_group_offset])
+    median_frac = lower_class_boundary + ((target_votes - cum_freq_prior) / l[found_group_offset]) * class_length
     return median_frac
 
 
@@ -28,7 +32,7 @@ def find_x_percent_index(percentile: int, l: list, group_midpoints: list):
     """
     Finds the index in the list account for percentile percentage of the data
     choses the index bin containing the percentile
-    :param percentile: an integer between 0 & 50
+    :param percentile: an integer between 0 & 100
     :param l: the list of values (in order). The first is at the zeroth percentile
     :param group_midpoints - the names of the groups
     :return: the group_midpoint value containing the percentile value
@@ -44,13 +48,27 @@ def find_x_percent_index(percentile: int, l: list, group_midpoints: list):
         prev_total = curr_total
         curr_total += l[i]
         if curr_total >= stop_point:
-            median = find_median_fraction(i, total, stop_point, prev_total, l, group_midpoints)
+            median = find_quantile_fraction(i, total, stop_point, prev_total, l, group_midpoints,
+                                            group_midpoints[1] - group_midpoints[0])
             return median
-            # group_midpoints[i]
 
         i += 1
     # This should never happen, but if it does return the last group
     return group_midpoints(len(l) - 1)
+
+
+def test_find_x_percent_index():
+    vals = [2, 7, 8, 4]
+    groups = [51, 56, 61, 66]
+
+    median = find_x_percent_index(50, vals, groups)
+    lower = find_x_percent_index(25, vals, groups)
+    upper = find_x_percent_index(75, vals, groups)
+
+    print(f"median: {median}, lower: {lower} upper: {upper}")
+    assert median == pytest.approx(61.4375, 0.001)
+    assert lower == pytest.approx(57.8214, 0.001)
+    assert upper == pytest.approx(64.71875, 0.001)
 
 
 def skewness_calc(x):
@@ -79,7 +97,7 @@ def skewness_calc(x):
 
 
 def add_skewness(user_df):
-    user_df = udf.drop(['mean', 'median'], axis=1)
+    user_df = user_df.drop(['mean', 'median'], axis=1)
 
     # user_df['skewness'] = user_df.apply(skewness_calc, axis=1)
     user_df[['lower', 'median', 'upper', 'skewness']] = user_df.apply(skewness_calc, axis=1)
@@ -120,5 +138,3 @@ def bin_skewness():
     dir_path = "/Users/rebjl/PycharmProjects/movie_project/"
     # Save the resulting dataframe as tab separated
     skewed_df.to_csv(dir_path + "skewed.csv", sep="\t")
-
-
